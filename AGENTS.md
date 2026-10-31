@@ -10,5 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Store test checkout uses a dedicated official PayPal React SDK component and shared order callbacks; client-side creation/capture is Sandbox-only and does not persist orders or implement production fee routing.
-- Shopper chat defaults to a browser-safe catalog-grounded local simulator; optional OpenAI mode uses the app-only streaming server route and falls back locally on failure so quota cannot block shopping. Never expose credentials, impersonate a real model, or present simulated fee routing as production functionality.
+- Shopper chat defaults to Gemini through the linked workspace connector in the app-only streaming server route, translating provider SSE into NDJSON with validated conversation history and shared catalog instructions; browser-safe local simulation remains the failure fallback so provider outages cannot block shopping. Never expose credentials, impersonate a real model, or present simulated fee routing as production functionality.
 - Chat async updates must belong to the active request; reset detaches and aborts it before clearing state so old responses cannot restore cleared history.

@@ -15,7 +15,7 @@ it("does not use a browser scroll return value as effect cleanup", async () => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"error":"Unavailable"}\n')));
   try {
-    const { unmount } = render(<ChatWidget mode="openai" />);
+    const { unmount } = render(<ChatWidget />);
     fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Mensaje" }), { target: { value: "Earbuds" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -28,10 +28,10 @@ it("does not use a browser scroll return value as effect cleanup", async () => {
   }
 });
 
-it("defaults to local responses and clears the sent draft", async () => {
+it("supports local responses and clears the sent draft", async () => {
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
-  render(<ChatWidget />);
+  render(<ChatWidget mode="local" />);
   fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
   const input = screen.getByRole("textbox", { name: "Mensaje" });
   fireEvent.change(input, { target: { value: "Tengo $20 y busco música" } });
@@ -42,7 +42,7 @@ it("defaults to local responses and clears the sent draft", async () => {
 });
 
 it("resets drafts and history during a response without stale replies returning", async () => {
-  render(<ChatWidget />);
+  render(<ChatWidget mode="local" />);
   fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
   const input = screen.getByRole("textbox", { name: "Mensaje" });
   fireEvent.change(input, { target: { value: "Tengo $20 y busco música" } });
@@ -59,7 +59,7 @@ it("resets drafts and history during a response without stale replies returning"
 
 it("falls back after an API quota error and accepts the next message", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"error":"Quota exhausted"}\n')));
-  render(<ChatWidget mode="openai" />);
+  render(<ChatWidget />);
   fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
   const input = screen.getByRole("textbox", { name: "Mensaje" });
   fireEvent.change(input, { target: { value: "Tengo $20 y busco música" } });

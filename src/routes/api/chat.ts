@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { chatHistorySchema, shopperInstructions } from "@/lib/shopper";
+import { chatHistorySchema } from "@/lib/shopper";
 import { chatUnavailable } from "@/lib/chat-response";
+import { GEMINI_GATEWAY_URL, GEMINI_SHOPPER_MODEL, geminiShopperPayload, geminiTextChunks } from "@/lib/gemini-shopper";
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -21,37 +22,55 @@ export const Route = createFileRoute("/api/chat")({
         }
         const parsed = chatHistorySchema.safeParse(body);
         if (!parsed.success) return Response.json({ error: "El mensaje o la conversación es demasiado largo. Abre una nueva conversación." }, { status: 400 });
-        const apiKey = process.env['OPENAI_API_KEY'];
-        if (!apiKey) return chatUnavailable("El chat está pendiente de configurar su conexión con OpenAI.");
+        const apiKey = process.env['LOVABLE_API_KEY'];
+        const connectionKey = process.env['UDC_GOOGLE_GEMINI_SHOPPER_API_KEY'];
+        if (!apiKey || !connectionKey) return chatUnavailable("Gemini está pendiente de configurar; usaré el respaldo local.");
+        const upstream = new AbortController();
+        const abort = () => upstream.abort();
+        request.signal.addEventListener("abort", abort, { once: true });
+        if (request.signal.aborted) abort();
+        const timeout = setTimeout(abort, 45000);
+        const release = () => { clearTimeout(timeout); request.signal.removeEventListener("abort", abort); };
         try {
-          const { default: OpenAI } = await import("openai");
-          const client = new OpenAI({ apiKey, maxRetries: 0 });
-          const completion = await client.chat.completions.create({
-            model: "gpt-4o-mini", stream: true,
-            messages: [{ role: "system", content: shopperInstructions() }, ...parsed.data.messages],
-          }, { signal: request.signal });
+          const completion = await fetch(`${GEMINI_GATEWAY_URL}/v1beta/models/${GEMINI_SHOPPER_MODEL}:streamGenerateContent?alt=sse`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${apiKey}`, "X-Connection-Api-Key": connectionKey, "Content-Type": "application/json" },
+            body: JSON.stringify(geminiShopperPayload(parsed.data.messages)),
+            signal: upstream.signal,
+          });
+          if (!completion.ok) {
+            // Never log raw provider bodies: they can echo credentials supplied in errors.
+            console.error("Gemini provider request failed", { status: completion.status });
+            await completion.body?.cancel();
+            release();
+            return chatUnavailable(`Gemini no pudo responder (HTTP ${completion.status}); usaré el respaldo local.`);
+          }
+          if (!completion.body) { release(); return chatUnavailable("Gemini no devolvió una respuesta; usaré el respaldo local."); }
+          const body = completion.body;
           const encoder = new TextEncoder();
+          let canceled = false;
           const stream = new ReadableStream<Uint8Array>({
             async start(controller) {
-              const emit = (event: object) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+              const emit = (event: object) => { if (!canceled) controller.enqueue(encoder.encode(JSON.stringify(event) + "\n")); };
+              let received = false;
               try {
-                for await (const chunk of completion) {
-                  const text = chunk.choices[0]?.delta.content;
-                  if (text) emit({ text });
+                for await (const text of geminiTextChunks(body)) {
+                  if (canceled) break;
+                  received = true;
+                  emit({ text });
                 }
-                emit({ done: true });
+                if (received) emit({ done: true });
+                else emit({ error: "Gemini no devolvió texto; usaré el respaldo local." });
               } catch {
                 if (!request.signal.aborted) emit({ error: "La respuesta se interrumpió. Puedes intentarlo nuevamente." });
-              } finally { controller.close(); }
+              } finally { release(); if (!canceled) controller.close(); }
             },
-            cancel() { completion.controller.abort(); },
+            cancel() { canceled = true; upstream.abort(); release(); },
           });
           return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-        } catch (cause) {
-          if (cause instanceof Error && "code" in cause && (cause.code === "insufficient_quota" || cause.code === "credit_balance_exhausted")) {
-            return chatUnavailable("OpenAI no tiene saldo o cuota disponible. El propietario debe revisar la facturación de su cuenta.");
-          }
-          return chatUnavailable("No se pudo conectar con OpenAI. Revisa la clave, el saldo y los límites de tu cuenta.");
+        } catch {
+          release();
+          return chatUnavailable("No se pudo conectar con Gemini; usaré el respaldo local.");
         }
       },
     },

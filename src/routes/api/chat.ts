@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { chatHistorySchema, shopperInstructions } from "@/lib/shopper";
+import { chatUnavailable } from "@/lib/chat-response";
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/api/chat")({
         const parsed = chatHistorySchema.safeParse(body);
         if (!parsed.success) return Response.json({ error: "El mensaje o la conversación es demasiado largo. Abre una nueva conversación." }, { status: 400 });
         const apiKey = process.env['OPENAI_API_KEY'];
-        if (!apiKey) return Response.json({ error: "El chat está pendiente de configurar su conexión con OpenAI." }, { status: 503 });
+        if (!apiKey) return chatUnavailable("El chat está pendiente de configurar su conexión con OpenAI.");
         try {
           const { default: OpenAI } = await import("openai");
           const client = new OpenAI({ apiKey, maxRetries: 0 });
@@ -48,9 +49,9 @@ export const Route = createFileRoute("/api/chat")({
           return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
         } catch (cause) {
           if (cause instanceof Error && "code" in cause && (cause.code === "insufficient_quota" || cause.code === "credit_balance_exhausted")) {
-            return Response.json({ error: "OpenAI no tiene saldo o cuota disponible. El propietario debe revisar la facturación de su cuenta." }, { status: 429 });
+            return chatUnavailable("OpenAI no tiene saldo o cuota disponible. El propietario debe revisar la facturación de su cuenta.");
           }
-          return Response.json({ error: "No se pudo conectar con OpenAI. Revisa la clave, el saldo y los límites de tu cuenta." }, { status: 502 });
+          return chatUnavailable("No se pudo conectar con OpenAI. Revisa la clave, el saldo y los límites de tu cuenta.");
         }
       },
     },

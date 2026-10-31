@@ -4,3 +4,6 @@
 - [x] Add dynamic local catalog and micropayment answers without OpenAI quota.
 - [x] Clear drafts on send/reset and cancel stale responses when resetting.
 - [x] Test local recommendations, follow-up context, and chat reset end-to-end.
+- [ ] Connect Google Gemini securely and verify requested model availability.
+- [ ] Switch live chat to Gemini while preserving local fallback and reset.
+- [ ] Test Gemini conversation streaming and verify catalog/fee answers in the store.

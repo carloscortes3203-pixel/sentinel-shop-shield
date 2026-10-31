@@ -25,7 +25,7 @@ const ICONS: Record<string, typeof Headphones> = {
 };
 
 function Store() {
-  const [selected, setSelected] = useState<Product>(PRODUCTS[0]);
+  const [selected, setSelected] = useState<Product>(PRODUCTS[0]!);
   return (
     <div className="min-h-screen">
       <SiteNav />
@@ -44,7 +44,7 @@ function Store() {
       <main className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[1fr_380px]">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {PRODUCTS.map((p, i) => {
-            const Icon = ICONS[p.id];
+            const Icon = ICONS[p.id] ?? Headphones;
             const micro = getPaymentRoute(p.price) === "micro";
             const isSel = selected.id === p.id;
             return (

@@ -34,7 +34,7 @@ type LogItem = { id: number; caseId: string; invoice: string; tracking: string; 
 
 const carriers = ["UPS", "FedEx", "USPS", "DHL"];
 function makeLog(id: number): LogItem {
-  const c = carriers[id % 4];
+  const c = carriers[id % 4]!;
   return {
     id,
     caseId: `PP-D-${(48210 + id).toString()}`,

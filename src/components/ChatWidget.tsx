@@ -10,7 +10,7 @@ function reply(q: string): string {
   if (s.includes("cheap") || s.includes("budget") || s.includes("under")) {
     const max = budget ? Number(budget[1]) : 30;
     const list = PRODUCTS.filter((p) => p.price <= max).sort((a, b) => a.price - b.price);
-    if (!list.length) return `Nothing under $${max} right now — the closest is ${PRODUCTS[2].name} at $${PRODUCTS[2].price}.`;
+    if (!list.length) return `Nothing under $${max} right now — the closest is ${PRODUCTS[2]!.name} at $${PRODUCTS[2]!.price}.`;
     return `Under $${max}: ${list.map((p) => `${p.name} ($${p.price})`).join(", ")}. All of these ride the Micro-Fee Route, saving 4% on fees.`;
   }
   const byCat = (c: string) => PRODUCTS.filter((p) => p.category === c);

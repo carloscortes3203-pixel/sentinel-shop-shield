@@ -1,92 +1,115 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Send, ShieldCheck, X } from "lucide-react";
-import { PRODUCTS, routeLabel } from "@/lib/pricing";
+import { Bot, Send, ShieldCheck, X, Square, RotateCcw } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
 
 type Msg = { from: "bot" | "user"; text: string };
 
-function reply(q: string): string {
-  const s = q.toLowerCase();
-  const budget = s.match(/\$?(\d+)/);
-  if (s.includes("cheap") || s.includes("budget") || s.includes("under")) {
-    const max = budget ? Number(budget[1]) : 30;
-    const list = PRODUCTS.filter((p) => p.price <= max).sort((a, b) => a.price - b.price);
-    if (!list.length) return `Nothing under $${max} right now — the closest is ${PRODUCTS[2]!.name} at $${PRODUCTS[2]!.price}.`;
-    return `Under $${max}: ${list.map((p) => `${p.name} ($${p.price})`).join(", ")}. All of these ride the Micro-Fee Route, saving 4% on fees.`;
-  }
-  const byCat = (c: string) => PRODUCTS.filter((p) => p.category === c);
-  if (/(music|audio|earbud|sound|speaker)/.test(s)) {
-    return `For audio I'd pick: ${byCat("audio").map((p) => `${p.name} $${p.price} — ${p.tagline}`).join("; ")}.`;
-  }
-  if (/(watch|fitness|run|health|wear)/.test(s)) {
-    return `For fitness: ${byCat("wearable").map((p) => `${p.name} $${p.price}`).join(" or ")}. The Smartwatch has GPS for runners.`;
-  }
-  if (/(gift|recommend|best|suggest)/.test(s)) {
-    return `Top picks: Wireless Earbuds ($15, ${routeLabel(15)}) and Smartwatch ($120, ${routeLabel(120)}).`;
-  }
-  if (/(safe|secure|fraud|protect|pay)/.test(s)) {
-    return "Every checkout is screened by Auth Guard and protected by automatic dispute evidence. You can pay with PayPal, Venmo or card.";
-  }
-  return "I can help you find gadgets! Try “earbuds under $20”, “something for running”, or “best gift”.";
-}
+const greeting: Msg = { from: "bot", text: "¡Hola! Soy Sentinel, tu asistente de compras. ¿Qué buscas y cuál es tu presupuesto?" };
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([
-    { from: "bot", text: "Hi! I'm Sentinel, your AI shopper guard. Tell me what you need and your budget." },
-  ]);
+  const [msgs, setMsgs] = useState<Msg[]>([greeting]);
+  const [error, setError] = useState("");
+  const active = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, typing]);
+  useEffect(() => () => active.current?.abort(), []);
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
-    setMsgs((m) => [...m, { from: "user", text }]);
+  const send = async (text: string) => {
+    if (!text.trim() || active.current) return;
+    const history: Msg[] = [...msgs.filter((m) => m.text.trim()), { from: "user", text: text.trim() }];
+    const controller = new AbortController();
+    active.current = controller;
+    setMsgs([...history, { from: "bot", text: "" }]);
     setInput("");
     setTyping(true);
-    setTimeout(() => {
+    setError("");
+    let received = "";
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+        body: JSON.stringify({ messages: history.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })) }),
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(typeof payload.error === "string" ? payload.error : "No se pudo enviar el mensaje.");
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No se recibió una respuesta.");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let complete = false;
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line);
+          if (typeof event.error === "string") throw new Error(event.error);
+          if (event.done === true) complete = true;
+          if (typeof event.text === "string") {
+            received += event.text;
+            setMsgs([...history, { from: "bot", text: received }]);
+          }
+        }
+        if (done) break;
+      }
+      if (!complete || !received) throw new Error("La respuesta se interrumpió. Puedes intentarlo nuevamente.");
+    } catch (cause) {
+      if (!received) setMsgs(history);
+      if (!controller.signal.aborted) {
+        setError(cause instanceof Error ? cause.message : "No se pudo enviar el mensaje.");
+        setInput(text);
+      }
+    } finally {
+      active.current = null;
       setTyping(false);
-      setMsgs((m) => [...m, { from: "bot", text: reply(text) }]);
-    }, 700);
+    }
   };
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="animate-rise flex h-[30rem] w-[22rem] flex-col overflow-hidden rounded-2xl border bg-card shadow-glow">
+        <div role="dialog" aria-label="Sentinel AI Shopper Guard" className="animate-rise flex h-[30rem] max-h-[calc(100dvh-7rem)] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-glow">
           <div className="bg-hero flex items-center justify-between px-4 py-3 text-ink-foreground">
             <div className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-brand"><ShieldCheck className="h-4 w-4" /></span>
               <div>
                 <p className="text-sm font-semibold">Sentinel AI Shopper Guard</p>
-                <p className="flex items-center gap-1 text-xs opacity-70"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Online</p>
+                <p className="flex items-center gap-1 text-xs opacity-70"><span className="h-1.5 w-1.5 rounded-full bg-success" /> {typing ? "Respondiendo…" : "Asistente de compras"}</p>
               </div>
             </div>
-            <button aria-label="Close chat" onClick={() => setOpen(false)} className="opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
+            <div className="flex"><Button variant="ghost" size="icon" title="Nueva conversación" aria-label="Nueva conversación" disabled={typing} onClick={() => { setMsgs([greeting]); setError(""); }}><RotateCcw /></Button><Button variant="ghost" size="icon" aria-label="Close chat" onClick={() => setOpen(false)}><X /></Button></div>
           </div>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
               <div key={i} className={`animate-rise flex ${m.from === "user" ? "justify-end" : ""}`}>
-                <p className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.from === "user" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.text}</p>
+                 {m.text && <div className={`max-w-[85%] break-words rounded-2xl px-3 py-2 text-sm [&_p]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:underline ${m.from === "user" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}><ReactMarkdown>{m.text}</ReactMarkdown></div>}
               </div>
             ))}
             {typing && <p className="w-14 rounded-2xl bg-secondary px-3 py-2 text-sm text-muted-foreground animate-pulse">•••</p>}
             <div ref={end} />
           </div>
+          {error && <p role="alert" className="px-4 pb-2 text-xs text-destructive">{error}</p>}
           <div className="flex flex-wrap gap-1.5 px-4 pb-2">
             {["Earbuds under $20", "For running", "Best gift"].map((c) => (
-              <button key={c} onClick={() => send(c)} className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary">{c}</button>
+              <Button variant="outline" size="sm" disabled={typing} key={c} onClick={() => void send(c)} className="h-auto rounded-full px-2.5 py-1 text-xs text-muted-foreground">{c}</Button>
             ))}
           </div>
           <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2 border-t p-3">
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask for a recommendation…" className="flex-1 rounded-lg bg-secondary px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            <button aria-label="Send" className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground"><Send className="h-4 w-4" /></button>
+            <input aria-label="Mensaje" maxLength={12000} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pregunta por un producto…" className="min-w-0 flex-1 rounded-lg bg-secondary px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            {typing ? <Button type="button" aria-label="Detener respuesta" size="icon" onClick={() => active.current?.abort()}><Square /></Button> : <Button aria-label="Send" size="icon" disabled={!input.trim()}><Send /></Button>}
           </form>
         </div>
       )}
-      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-ink-foreground shadow-glow transition-transform hover:scale-105">
+      <Button aria-expanded={open} onClick={() => setOpen((o) => !o)} className="h-auto rounded-full bg-ink px-5 py-3 text-sm font-semibold text-ink-foreground shadow-glow transition-transform hover:scale-105 hover:bg-ink">
         <Bot className="h-5 w-5 text-accent" /> Sentinel AI Shopper Guard
-      </button>
+      </Button>
     </div>
   );
 }

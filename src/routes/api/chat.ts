@@ -46,7 +46,10 @@ export const Route = createFileRoute("/api/chat")({
             cancel() { completion.controller.abort(); },
           });
           return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-        } catch {
+        } catch (cause) {
+          if (cause instanceof Error && "code" in cause && (cause.code === "insufficient_quota" || cause.code === "credit_balance_exhausted")) {
+            return Response.json({ error: "OpenAI no tiene saldo o cuota disponible. El propietario debe revisar la facturación de su cuenta." }, { status: 429 });
+          }
           return Response.json({ error: "No se pudo conectar con OpenAI. Revisa la clave, el saldo y los límites de tu cuenta." }, { status: 502 });
         }
       },

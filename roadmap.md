@@ -1,3 +1,4 @@
-- [ ] Connect server-side OpenAI streaming with catalog and fee-routing context.
-- [ ] Replace scripted chat with full-history streaming and recoverable errors.
-- [ ] Test fee context and verify the live chat.
+- [x] Connect server-side OpenAI streaming with catalog and fee-routing context.
+- [x] Replace scripted chat with full-history streaming and recoverable errors.
+- [x] Test fee context and verify the live chat's error handling and mobile fit.
+- [ ] Verify live recommendations and conversation continuity — blocked by provider insufficient_quota / credit_balance_exhausted; account funding required.

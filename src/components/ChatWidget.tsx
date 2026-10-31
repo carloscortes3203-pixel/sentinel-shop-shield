@@ -15,7 +15,9 @@ export function ChatWidget() {
   const [error, setError] = useState("");
   const active = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, typing]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, typing]);
   useEffect(() => () => active.current?.abort(), []);
 
   const send = async (text: string) => {

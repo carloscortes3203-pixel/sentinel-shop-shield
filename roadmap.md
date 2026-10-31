@@ -1,6 +1,6 @@
 - [x] Connect server-side OpenAI streaming with catalog and fee-routing context.
 - [x] Replace scripted chat with full-history streaming and recoverable errors.
 - [x] Test fee context and verify the live chat's error handling and mobile fit.
-- [ ] Add dynamic local catalog and micropayment answers without OpenAI quota.
-- [ ] Clear drafts on send/reset and cancel stale responses when resetting.
-- [ ] Test local recommendations, follow-up context, and chat reset end-to-end.
+- [x] Add dynamic local catalog and micropayment answers without OpenAI quota.
+- [x] Clear drafts on send/reset and cancel stale responses when resetting.
+- [x] Test local recommendations, follow-up context, and chat reset end-to-end.

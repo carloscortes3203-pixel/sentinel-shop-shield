@@ -2,23 +2,32 @@ import { useEffect, useRef, useState } from "react";
 import { Bot, Send, ShieldCheck, X, Square, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
+import { localShopperReply } from "@/lib/local-shopper";
 
 type Msg = { from: "bot" | "user"; text: string };
 
 const greeting: Msg = { from: "bot", text: "¡Hola! Soy Sentinel, tu asistente de compras. ¿Qué buscas y cuál es tu presupuesto?" };
 
-export function ChatWidget() {
+export function ChatWidget({ mode = "local" }: { mode?: "local" | "openai" }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([greeting]);
-  const [error, setError] = useState("");
   const active = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth" });
+    end.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [msgs, typing]);
   useEffect(() => () => active.current?.abort(), []);
+
+  const reset = () => {
+    const controller = active.current;
+    active.current = null;
+    controller?.abort();
+    setMsgs([greeting]);
+    setInput("");
+    setTyping(false);
+  };
 
   const send = async (text: string) => {
     if (!text.trim() || active.current) return;
@@ -28,9 +37,18 @@ export function ChatWidget() {
     setMsgs([...history, { from: "bot", text: "" }]);
     setInput("");
     setTyping(true);
-    setError("");
     let received = "";
     try {
+      if (mode === "local") {
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(resolve, 250);
+          controller.signal.addEventListener("abort", () => { clearTimeout(timeout); resolve(); }, { once: true });
+        });
+        if (active.current === controller && !controller.signal.aborted) {
+          setMsgs([...history, { from: "bot", text: localShopperReply(history) }]);
+        }
+        return;
+      }
       const response = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
         body: JSON.stringify({ messages: history.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })) }),
@@ -46,6 +64,7 @@ export function ChatWidget() {
       let complete = false;
       while (true) {
         const { value, done } = await reader.read();
+        if (active.current !== controller || controller.signal.aborted) { await reader.cancel(); return; }
         buffer += decoder.decode(value, { stream: !done });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
@@ -62,15 +81,15 @@ export function ChatWidget() {
         if (done) break;
       }
       if (!complete || !received) throw new Error("La respuesta se interrumpió. Puedes intentarlo nuevamente.");
-    } catch (cause) {
-      if (!received) setMsgs(history);
-      if (!controller.signal.aborted) {
-        setError(cause instanceof Error ? cause.message : "No se pudo enviar el mensaje.");
-        setInput(text);
+    } catch {
+      if (active.current === controller && !controller.signal.aborted) {
+        setMsgs([...history, { from: "bot", text: localShopperReply(history) }]);
       }
     } finally {
-      active.current = null;
-      setTyping(false);
+      if (active.current === controller) {
+        active.current = null;
+        setTyping(false);
+      }
     }
   };
 
@@ -86,7 +105,7 @@ export function ChatWidget() {
                 <p className="flex items-center gap-1 text-xs opacity-70"><span className="h-1.5 w-1.5 rounded-full bg-success" /> {typing ? "Respondiendo…" : "Asistente de compras"}</p>
               </div>
             </div>
-            <div className="flex"><Button variant="ghost" size="icon" title="Nueva conversación" aria-label="Nueva conversación" disabled={typing} onClick={() => { setMsgs([greeting]); setError(""); }}><RotateCcw /></Button><Button variant="ghost" size="icon" aria-label="Close chat" onClick={() => setOpen(false)}><X /></Button></div>
+            <div className="flex"><Button variant="ghost" size="icon" title="Nueva conversación" aria-label="Nueva conversación" onClick={reset}><RotateCcw /></Button><Button variant="ghost" size="icon" aria-label="Close chat" onClick={() => setOpen(false)}><X /></Button></div>
           </div>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
@@ -97,7 +116,6 @@ export function ChatWidget() {
             {typing && <p className="w-14 rounded-2xl bg-secondary px-3 py-2 text-sm text-muted-foreground animate-pulse">•••</p>}
             <div ref={end} />
           </div>
-          {error && <p role="alert" className="px-4 pb-2 text-xs text-destructive">{error}</p>}
           <div className="flex flex-wrap gap-1.5 px-4 pb-2">
             {["Earbuds under $20", "For running", "Best gift"].map((c) => (
               <Button variant="outline" size="sm" disabled={typing} key={c} onClick={() => void send(c)} className="h-auto rounded-full px-2.5 py-1 text-xs text-muted-foreground">{c}</Button>
@@ -105,7 +123,7 @@ export function ChatWidget() {
           </div>
           <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2 border-t p-3">
             <input aria-label="Mensaje" maxLength={12000} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pregunta por un producto…" className="min-w-0 flex-1 rounded-lg bg-secondary px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            {typing ? <Button type="button" aria-label="Detener respuesta" size="icon" onClick={() => active.current?.abort()}><Square /></Button> : <Button aria-label="Send" size="icon" disabled={!input.trim()}><Send /></Button>}
+            {typing ? <Button type="button" aria-label="Detener respuesta" size="icon" onClick={() => { const controller = active.current; active.current = null; controller?.abort(); setTyping(false); setMsgs((history) => history.filter((message) => message.text.trim())); }}><Square /></Button> : <Button aria-label="Send" size="icon" disabled={!input.trim()}><Send /></Button>}
           </form>
         </div>
       )}

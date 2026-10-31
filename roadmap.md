@@ -1,0 +1,3 @@
+- [ ] Connect server-side OpenAI streaming with catalog and fee-routing context.
+- [ ] Replace scripted chat with full-history streaming and recoverable errors.
+- [ ] Test fee context and verify the live chat.

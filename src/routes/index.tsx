@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
-import { Headphones, Watch, Cable, BatteryCharging, Speaker, Activity, Zap, Route as RouteIcon, Lock, Check } from "lucide-react";
+import { Headphones, Watch, Cable, BatteryCharging, Speaker, Activity, Zap, Route as RouteIcon } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { ChatWidget } from "@/components/ChatWidget";
+import { PayPalCheckout } from "@/components/PayPalCheckout";
 import { PRODUCTS, getPaymentRoute, routeLabel, type Product } from "@/lib/pricing";
 
 export const Route = createFileRoute("/")({
@@ -25,7 +25,8 @@ const ICONS: Record<string, typeof Headphones> = {
 };
 
 function Store() {
-  const [selected, setSelected] = useState<Product>(PRODUCTS[0]!);
+  const [selected, setSelected] = useState<Product | undefined>(PRODUCTS[0]);
+  if (!selected) return null;
   return (
     <div className="min-h-screen">
       <SiteNav />
@@ -78,7 +79,7 @@ function Store() {
             <p className="font-display text-2xl font-bold">${selected.price.toFixed(2)}</p>
           </div>
           <RouteBadge price={selected.price} />
-          <PayPalContainer product={selected} />
+          <PayPalCheckout product={selected} />
         </aside>
       </main>
       <ChatWidget />
@@ -96,35 +97,3 @@ function RouteBadge({ price }: { price: number }) {
   );
 }
 
-function PayPalContainer({ product }: { product: Product }) {
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
-  const pay = (method: string) => {
-    setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      toast.success(`Paid $${product.price} via ${method}`, { description: `${routeLabel(product.price)} · Auth Guard: Low risk` });
-    }, 1100);
-  };
-  return (
-    <div id="paypal-button-container" className="mt-6 space-y-3 rounded-xl border border-dashed p-4">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Lock className="h-3 w-3" /> PayPal Fastlane · Smart Payment Buttons</p>
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email for Fastlane express checkout"
-        className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-      />
-      <button disabled={busy} onClick={() => pay("PayPal")} className="h-11 w-full rounded-full bg-paypal font-bold italic text-paypal-foreground transition hover:brightness-95 disabled:opacity-60">
-        {busy ? "Processing…" : "PayPal"}
-      </button>
-      <button disabled={busy} onClick={() => pay("Venmo")} className="h-11 w-full rounded-full bg-primary font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">Venmo</button>
-      <button disabled={busy} onClick={() => pay("Card")} className="h-11 w-full rounded-full bg-ink font-semibold text-ink-foreground transition hover:brightness-125 disabled:opacity-60">Debit or Credit Card</button>
-      <ul className="space-y-1 pt-2 text-xs text-muted-foreground">
-        {["Auth Guard risk screening", "Auto dispute evidence", "Async retry on outages"].map((t) => (
-          <li key={t} className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> {t}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}

@@ -7,5 +7,6 @@
 - [x] Connect Google Gemini securely; user chose gemini-flash-latest after gemini-1.5-flash returned 404.
 - [x] Switch live chat to Gemini while preserving local fallback and reset.
 - [x] Test Gemini SSE decoding and payload context; verify store fallback catalog/fee answers and reset without runtime errors.
-- [ ] Change to gemini-1.5-flash generateContent and remove live-chat fallback/provider status notices.
-- [ ] Verify requested model generation and chat state with no visible 503/fallback.
+- [x] Change to gemini-1.5-flash generateContent and remove live-chat fallback/provider status notices; preserve connector-held credentials.
+- [x] Verify chat unavailable state with no visible 503/fallback, cleared drafts and reliable reset.
+- [ ] Verify successful gemini-1.5-flash generation — blocked by Google HTTP 404 NOT_FOUND / unsupported generateContent for the requested model.

@@ -19,7 +19,7 @@ it("does not use a browser scroll return value as effect cleanup", async () => {
     fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Mensaje" }), { target: { value: "Earbuds" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    await screen.findByText(/Simulación local/);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument());
     expect(scroll).toHaveBeenCalled();
     expect(() => unmount()).not.toThrow();
   } finally {
@@ -57,18 +57,21 @@ it("resets drafts and history during a response without stale replies returning"
   expect(screen.queryByText(/Wireless Earbuds —/)).not.toBeInTheDocument();
 });
 
-it("falls back after an API quota error and accepts the next message", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"error":"Quota exhausted"}\n')));
+it("does not substitute a local answer after provider failure and accepts the next message", async () => {
+  const fetch = vi.fn().mockImplementationOnce(() => Promise.resolve(new Response('{"error":"HTTP 503"}\n')))
+    .mockImplementationOnce(() => Promise.resolve(new Response('{"text":"Wireless Earbuds $15"}\n{"done":true}\n')));
+  vi.stubGlobal("fetch", fetch);
   render(<ChatWidget />);
   fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
   const input = screen.getByRole("textbox", { name: "Mensaje" });
   fireEvent.change(input, { target: { value: "Tengo $20 y busco música" } });
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
-  await screen.findByText(/Wireless Earbuds — \$15.00 USD/);
   expect(input).toHaveValue("");
   await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument());
+  expect(screen.queryByText(/Wireless Earbuds/)).not.toBeInTheDocument();
   fireEvent.change(input, { target: { value: "¿Y las comisiones?" } });
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
-  await screen.findByText(/estrictamente menores/);
+  await screen.findByText(/Wireless Earbuds \$15/);
+  expect(fetch).toHaveBeenCalledTimes(2);
   expect(input).toHaveValue("");
 });

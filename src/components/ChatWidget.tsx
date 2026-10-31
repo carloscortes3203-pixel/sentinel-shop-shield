@@ -83,7 +83,7 @@ export function ChatWidget({ mode = "gemini" }: { mode?: "local" | "gemini" }) {
       if (!complete || !received) throw new Error("La respuesta se interrumpió. Puedes intentarlo nuevamente.");
     } catch {
       if (active.current === controller && !controller.signal.aborted) {
-        setMsgs([...history, { from: "bot", text: localShopperReply(history) }]);
+        setMsgs([...history, { from: "bot", text: "No hay una respuesta disponible en este momento. Puedes intentarlo nuevamente." }]);
       }
     } finally {
       if (active.current === controller) {

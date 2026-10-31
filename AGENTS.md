@@ -10,5 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Store test checkout uses a dedicated official PayPal React SDK component and shared order callbacks; client-side creation/capture is Sandbox-only and does not persist orders or implement production fee routing.
-- Shopper chat defaults to Gemini through the linked workspace connector in the app-only streaming server route, translating provider SSE into NDJSON with validated conversation history and shared catalog instructions; browser-safe local simulation remains the failure fallback so provider outages cannot block shopping. Never expose credentials, impersonate a real model, or present simulated fee routing as production functionality.
+- Live shopper chat calls Gemini generateContent through the linked workspace connector in the app-only server route and wraps validated provider text in NDJSON for the widget; failed calls return a neutral unavailable state, not simulated product answers. Connector credentials stay server-side, never in query strings. Never impersonate a real model or present simulated fee routing as production functionality.
 - Chat async updates must belong to the active request; reset detaches and aborts it before clearing state so old responses cannot restore cleared history.

@@ -4,6 +4,7 @@
 - [x] Add dynamic local catalog and micropayment answers without OpenAI quota.
 - [x] Clear drafts on send/reset and cancel stale responses when resetting.
 - [x] Test local recommendations, follow-up context, and chat reset end-to-end.
-- [ ] Connect Google Gemini securely and verify requested model availability.
-- [ ] Switch live chat to Gemini while preserving local fallback and reset.
-- [ ] Test Gemini conversation streaming and verify catalog/fee answers in the store.
+- [x] Connect Google Gemini securely; user chose gemini-flash-latest after gemini-1.5-flash returned 404.
+- [x] Switch live chat to Gemini while preserving local fallback and reset.
+- [x] Test Gemini SSE decoding and payload context; verify store fallback catalog/fee answers and reset without runtime errors.
+- [ ] Verify successful live Gemini catalog/fee responses — blocked by Google's HTTP 503 UNAVAILABLE (high demand); model and app credential checks succeed.

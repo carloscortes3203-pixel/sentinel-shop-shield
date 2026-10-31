@@ -15,7 +15,7 @@ describe("PayPal Sandbox checkout", () => {
     if (!product) throw new Error("Missing test product");
     const create = vi.fn().mockResolvedValue("TEST-ORDER");
     const handlers = createCheckoutHandlers(product, vi.fn());
-    const result = await handlers.createOrder?.({}, { order: { create }, subscription: { create: vi.fn() } });
+    const result = await handlers.createOrder?.({ paymentSource: "paypal" }, { order: { create } });
     expect(result).toBe("TEST-ORDER");
     expect(create).toHaveBeenCalledWith({ intent: "CAPTURE", purchase_units: [{ reference_id: product.id, description: product.name, amount: { currency_code: "USD", value: product.price.toFixed(2) } }] });
   });
@@ -26,7 +26,7 @@ describe("PayPal Sandbox checkout", () => {
     const confirmed = vi.fn();
     const capture = vi.fn().mockResolvedValue({ id: "CAPTURED-ORDER", status: "COMPLETED" });
     const handlers = createCheckoutHandlers(product, confirmed);
-    const actions = { order: { capture, get: vi.fn(), authorize: vi.fn() }, redirect: vi.fn(), restart: vi.fn() };
+    const actions = { order: { capture, get: vi.fn(), authorize: vi.fn(), patch: vi.fn() }, redirect: vi.fn(), restart: vi.fn() };
     await handlers.onApprove?.({ orderID: "TEST-ORDER" }, actions);
     expect(capture).toHaveBeenCalledOnce();
     expect(confirmed).toHaveBeenCalledWith("CAPTURED-ORDER");

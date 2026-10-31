@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { PayPalButtons, PayPalScriptProvider, usePayPalScriptReducer } from "@paypal/react-paypal-js";
+import { DISPATCH_ACTION, PayPalButtons, PayPalScriptProvider, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import { Lock, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ function CheckoutButtons({ product }: { product: Product }) {
   if (isRejected) return (
     <div className="space-y-3">
       <p role="alert" className="text-sm text-destructive">PayPal could not load. Please retry or check the Sandbox Client ID.</p>
-      <Button variant="outline" onClick={() => dispatch({ type: "resetOptions", value: PAYPAL_OPTIONS })}>Retry PayPal</Button>
+      <Button variant="outline" onClick={() => dispatch({ type: DISPATCH_ACTION.RESET_OPTIONS, value: PAYPAL_OPTIONS })}>Retry PayPal</Button>
     </div>
   );
 

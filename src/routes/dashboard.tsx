@@ -61,10 +61,11 @@ function Dashboard() {
   const [protectedTx, setProtectedTx] = useState(12408);
   const [risk, setRisk] = useState<Risk>("low");
   const [score, setScore] = useState(12);
-  const [log, setLog] = useState<LogItem[]>(() => [3, 2, 1].map(makeLog));
+  const [log, setLog] = useState<LogItem[]>([]);
   const [simulating, setSimulating] = useState(false);
 
   useEffect(() => {
+    setLog([3, 2, 1].map(makeLog));
     let n = 4;
     const t = setInterval(() => {
       setSaved((s) => s + Math.random() * 2.4);

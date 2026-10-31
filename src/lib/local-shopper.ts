@@ -8,7 +8,8 @@ function normalize(text: string) {
 
 function budgetFrom(text: string): number | undefined {
   const match = text.match(/(?:\$\s*|(?:presupuesto(?:\s+de)?|tengo|hasta|menos de|under|budget(?:\s+of)?|up to)\s*\$?\s*)(\d+(?:[.,]\d+)?)/i);
-  return match ? Number(match[1].replace(",", ".")) : undefined;
+  const amount = match?.[1];
+  return amount === undefined ? undefined : Number(amount.replace(",", "."));
 }
 
 function productLine(product: Product, english: boolean) {

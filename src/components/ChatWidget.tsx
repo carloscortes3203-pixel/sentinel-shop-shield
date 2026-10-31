@@ -8,7 +8,7 @@ type Msg = { from: "bot" | "user"; text: string };
 
 const greeting: Msg = { from: "bot", text: "¡Hola! Soy Sentinel, tu asistente de compras. ¿Qué buscas y cuál es tu presupuesto?" };
 
-export function ChatWidget({ mode = "local" }: { mode?: "local" | "openai" }) {
+export function ChatWidget({ mode = "gemini" }: { mode?: "local" | "gemini" }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);

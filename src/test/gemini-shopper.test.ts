@@ -1,8 +1,14 @@
 import { expect, it } from "vitest";
-import { GEMINI_SHOPPER_MODEL, geminiShopperPayload, geminiTextChunks } from "@/lib/gemini-shopper";
+import { GEMINI_SHOPPER_MODEL, geminiShopperPayload, geminiTextChunks, geminiResponseText } from "@/lib/gemini-shopper";
 
-it("uses the user's selected latest Gemini Flash model", () => {
-  expect(GEMINI_SHOPPER_MODEL).toBe("gemini-flash-latest");
+it("uses the requested Gemini 1.5 Flash model", () => {
+  expect(GEMINI_SHOPPER_MODEL).toBe("gemini-1.5-flash");
+});
+
+it("reads real generateContent text and rejects unsuccessful model results", () => {
+  expect(geminiResponseText({ candidates: [{ content: { parts: [{ text: "Wireless Earbuds $15" }] }, finishReason: "STOP" }] })).toBe("Wireless Earbuds $15");
+  expect(() => geminiResponseText({ error: { code: 503 } })).toThrow();
+  expect(() => geminiResponseText({ candidates: [] })).toThrow();
 });
 
 it("sends full conversation context and catalog fee instructions to Gemini", () => {

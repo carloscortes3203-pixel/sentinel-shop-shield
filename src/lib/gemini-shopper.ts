@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { chatHistorySchema, shopperInstructions } from "./shopper";
 
-export const GEMINI_SHOPPER_MODEL = "gemini-flash-latest";
+export const GEMINI_SHOPPER_MODEL = "gemini-1.5-flash";
 export const GEMINI_GATEWAY_URL = "https://connector-gateway.lovable.dev/udc_google_gemini_shopper";
 
 export function geminiShopperPayload(messages: z.infer<typeof chatHistorySchema>["messages"]) {
@@ -23,6 +23,16 @@ const chunkSchema = z.object({
     finishReason: z.string().optional(),
   })).optional(),
 });
+
+export function geminiResponseText(body: unknown): string {
+  const chunk = chunkSchema.parse(body);
+  if (chunk.error !== undefined) throw new Error("Gemini generation failed");
+  const candidate = chunk.candidates?.[0];
+  if (candidate?.finishReason && candidate.finishReason !== "STOP") throw new Error("Gemini response incomplete");
+  const text = candidate?.content?.parts?.filter((part) => !part.thought).map((part) => part.text ?? "").join("") ?? "";
+  if (!text.trim()) throw new Error("Gemini response empty");
+  return text;
+}
 
 /** Decode complete SSE events, including UTF-8 and events split across network chunks. */
 export async function* geminiTextChunks(body: ReadableStream<Uint8Array>) {

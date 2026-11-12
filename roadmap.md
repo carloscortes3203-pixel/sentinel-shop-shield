@@ -10,4 +10,4 @@
 - [x] Change to gemini-1.5-flash generateContent and remove live-chat fallback/provider status notices; preserve connector-held credentials.
 - [x] Verify chat unavailable state with no visible 503/fallback, cleared drafts and reliable reset.
 - [ ] Verify successful gemini-1.5-flash generation — blocked by Google HTTP 404 NOT_FOUND / unsupported generateContent for the requested model.
-- [ ] Restore clearly labeled emulated chat answers on provider failure and verify recommendations, fee answers and reset.
+- [x] Restore clearly labeled emulated chat answers on provider failure and verify recommendations, fee answers and reset.

@@ -57,7 +57,7 @@ it("resets drafts and history during a response without stale replies returning"
   expect(screen.queryByText(/Wireless Earbuds —/)).not.toBeInTheDocument();
 });
 
-it("does not substitute a local answer after provider failure and accepts the next message", async () => {
+it("uses catalog answers after provider failure and retries the provider on the next message", async () => {
   const fetch = vi.fn().mockImplementationOnce(() => Promise.resolve(new Response('{"error":"HTTP 503"}\n')))
     .mockImplementationOnce(() => Promise.resolve(new Response('{"text":"Wireless Earbuds $15"}\n{"done":true}\n')));
   vi.stubGlobal("fetch", fetch);
@@ -68,10 +68,37 @@ it("does not substitute a local answer after provider failure and accepts the ne
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
   expect(input).toHaveValue("");
   await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument());
-  expect(screen.queryByText(/Wireless Earbuds/)).not.toBeInTheDocument();
+  expect(screen.getByText(/Wireless Earbuds — \$15.00 USD/)).toBeInTheDocument();
+  expect(screen.queryByText(/Mini Bluetooth Speaker/)).not.toBeInTheDocument();
   fireEvent.change(input, { target: { value: "¿Y las comisiones?" } });
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
   await screen.findByText(/Wireless Earbuds \$15/);
   expect(fetch).toHaveBeenCalledTimes(2);
   expect(input).toHaveValue("");
+});
+
+it("emulates fee answers after a network failure", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Network failure")));
+  render(<ChatWidget />);
+  fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensaje" }), { target: { value: "¿Cuál es la tarifa de Micropagos?" } });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await screen.findByText(/estrictamente menores a/, { exact: false });
+  expect(screen.getByText("estrictamente menores a $26.67 USD")).toBeInTheDocument();
+  expect(screen.getByText(/no un descuento al comprador/)).toBeInTheDocument();
+});
+
+it("does not emulate an aborted provider request after reset", async () => {
+  let rejectRequest: ((reason: Error) => void) | undefined;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((_, reject) => { rejectRequest = reject; })));
+  render(<ChatWidget />);
+  fireEvent.click(screen.getByRole("button", { name: "Sentinel AI Shopper Guard" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensaje" }), { target: { value: "Tengo $20 y busco música" } });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nueva conversación" }));
+  rejectRequest?.(new Error("Aborted"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument());
+  expect(screen.queryByText(/Wireless Earbuds/)).not.toBeInTheDocument();
+  expect(screen.queryByText("Tengo $20 y busco música")).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Mensaje" })).toHaveValue("");
 });

@@ -44,3 +44,25 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+# Sentinel Shop Shield 🛡️💳
+
+An AI-powered risk evaluation, shopping assistant, and payment fee optimization layer built for the PayPal AI Hackathon.
+
+## 🚀 Key Features
+- **PayPal Sandbox Integration:** Dynamic routing between Micro-Fee and Standard PayPal routes based on payment thresholds ($26.67 USD logic).
+- **Sentinel AI Shopper Guard:** Real-time conversational AI shopping assistant powered by Google Gemini API (`gemini-1.5-flash`).
+- **Auth Guard Dashboard:** Pre-transaction risk scoring, fraud detection, and anti-180-day dispute evidence logs.
+- **System Resilience Testing:** 500 API error simulation toggle to guarantee continuous checkout availability.
+
+## 🛠️ Tech Stack
+- **Frontend:** React, TypeScript, Tailwind CSS (built with Lovable)
+- **Payments:** PayPal Sandbox SDK
+- **AI Core:** Google Gemini API (`gemini-1.5-flash`)
+
+## 📦 How to Run Locally
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/carloscortes3203-pixel/sentinel-shop-shield.git](https://github.com/carloscortes3203-pixel/sentinel-shop-shield.git)
+
+   npm install
+   npm run dev
